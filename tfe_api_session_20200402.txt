@@ -1,0 +1,1509 @@
+#!/bin/bash
+
+# Terraform repo
+# https://github.com/ykhemani/tfe-demo-aws
+
+# Sentinel policy repo
+# https://github.com/ykhemani/tfe-demo-policy-set
+
+# set Terraform Enterprise Tokens
+
+# user token
+export TFE_USER_TOKEN=
+
+# owner team token - for plans and runs via a CI/CD pipeline
+export TFE_TEAM_TOKEN=
+
+# org 0 api token - for managing teams, team memberships and workspaces
+export TFE_ORG_TOKEN=
+
+# set Terraform Enterprise Organization
+export TFE_ORG=0
+
+# set Terraform Enterprise endpoint address
+export TFE_ADDR=
+
+# VCS OAUTH Token ID (there will be one per VCS definition)
+export VCS_OAUTH_TOKEN_ID=
+
+
+
+################################################################################
+################################################################################
+# Workspaces
+
+################################################################################
+# Create a VCS connected workspace (for UI / VCS workflow)
+
+# POST /organizations/:organization_name/workspaces
+
+export USER_WORKSPACE_NAME="user-workspace"
+export TF_VERSION="0.12.23"
+export WORKING_DIRECTORY=""
+export VCS_REPO="ykhemani/tfe-demo-aws"
+export VCS_BRANCH="" # blank for default
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "attributes": {
+      "name": "${USER_WORKSPACE_NAME}",
+      "terraform_version": "${TF_VERSION}",
+      "working-directory": "${WORKING_DIRECTORY}",
+      "vcs-repo": {
+        "identifier": "${VCS_REPO}",
+        "oauth-token-id": "${VCS_OAUTH_TOKEN_ID}",
+        "branch": "${VCS_BRANCH}",
+        "default-branch": true
+      }
+    },
+    "type": "workspaces"
+  }
+}
+EOF
+
+curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "ws-rdCnEvU1KgVAGJnk",
+    "type": "workspaces",
+    "attributes": {
+      "name": "user-workspace",
+      "auto-apply": false,
+      "created-at": "2020-04-02T12:53:30.157Z",
+      "environment": "default",
+      "locked": false,
+      "queue-all-runs": false,
+      "terraform-version": "0.12.23",
+      "working-directory": "",
+      "speculative-enabled": true,
+      "latest-change-at": "2020-04-02T12:53:30.157Z",
+      "operations": true,
+      "vcs-repo": {
+        "branch": "",
+        "ingress-submodules": false,
+        "identifier": "ykhemani/tfe-demo-aws",
+        "display-identifier": "ykhemani/tfe-demo-aws",
+        "oauth-token-id": "ot-97jWEfbAk9sSoz2Z",
+        "webhook-url": "https://tfe.example.com/webhooks/vcs/2ee62f56-4b4d-4bc6-877e-0a4249f36fb9"
+      },
+      "vcs-repo-identifier": "ykhemani/tfe-demo-aws",
+      "permissions": {
+        "can-update": true,
+        "can-destroy": true,
+        "can-queue-destroy": false,
+        "can-queue-run": false,
+        "can-queue-apply": false,
+        "can-update-variable": true,
+        "can-lock": false,
+        "can-unlock": false,
+        "can-force-unlock": false,
+        "can-read-settings": true
+      },
+      "actions": {
+        "is-destroyable": false
+      },
+      "description": null,
+      "file-triggers-enabled": true,
+      "trigger-prefixes": [],
+      "source": "tfe-api",
+      "source-name": null,
+      "source-url": null
+    },
+    "relationships": {
+      "organization": {
+        "data": {
+          "id": "0",
+          "type": "organizations"
+        }
+      },
+      "current-run": {
+        "data": null
+      },
+      "latest-run": {
+        "data": null
+      },
+      "current-state-version": {
+        "data": null
+      }
+    },
+    "links": {
+      "self": "/api/v2/organizations/0/workspaces/user-workspace"
+    }
+  }
+}
+
+################################################################################
+# Create a workspace without a VCS connection (for CI/CD workflow)
+
+# POST /organizations/:organization_name/workspaces
+
+export API_WORKSPACE_NAME="api-driven-workspace"
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "attributes": {
+      "name": "${API_WORKSPACE_NAME}",
+      "auto-apply": true
+    },
+    "type": "workspaces"
+  }
+}
+EOF
+
+curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "ws-nWqvPuz4op7rwGbS",
+    "type": "workspaces",
+    "attributes": {
+      "name": "api-driven-workspace",
+      "auto-apply": true,
+      "created-at": "2020-04-02T13:58:25.461Z",
+      "environment": "default",
+      "locked": false,
+      "queue-all-runs": false,
+      "terraform-version": "0.12.23",
+      "working-directory": null,
+      "speculative-enabled": true,
+      "latest-change-at": "2020-04-02T13:58:25.461Z",
+      "operations": true,
+      "vcs-repo": null,
+      "vcs-repo-identifier": null,
+      "permissions": {
+        "can-update": true,
+        "can-destroy": true,
+        "can-queue-destroy": false,
+        "can-queue-run": false,
+        "can-queue-apply": false,
+        "can-update-variable": true,
+        "can-lock": false,
+        "can-unlock": false,
+        "can-force-unlock": false,
+        "can-read-settings": true
+      },
+      "actions": {
+        "is-destroyable": true
+      },
+      "description": null,
+      "file-triggers-enabled": true,
+      "trigger-prefixes": [],
+      "source": "tfe-api",
+      "source-name": null,
+      "source-url": null
+    },
+    "relationships": {
+      "organization": {
+        "data": {
+          "id": "0",
+          "type": "organizations"
+        }
+      },
+      "current-run": {
+        "data": null
+      },
+      "latest-run": {
+        "data": null
+      },
+      "current-state-version": {
+        "data": null
+      }
+    },
+    "links": {
+      "self": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+    }
+  }
+}
+
+
+################################################################################
+# List workspaces
+
+# GET /organizations/:organization_name/workspaces
+
+curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": [
+    {
+      "id": "ws-yjdXXuhewXdRYTfh",
+      "type": "workspaces",
+      "attributes": {
+        "name": "api-driven-workspace",
+        "auto-apply": false,
+        "created-at": "2020-04-02T12:53:59.434Z",
+        "environment": "default",
+        "locked": false,
+        "queue-all-runs": false,
+        "terraform-version": "0.12.23",
+        "working-directory": null,
+        "speculative-enabled": true,
+        "latest-change-at": "2020-04-02T12:53:59.434Z",
+        "operations": true,
+        "vcs-repo": null,
+        "vcs-repo-identifier": null,
+        "permissions": {
+          "can-update": true,
+          "can-destroy": true,
+          "can-queue-destroy": false,
+          "can-queue-run": false,
+          "can-queue-apply": false,
+          "can-update-variable": true,
+          "can-lock": false,
+          "can-unlock": false,
+          "can-force-unlock": false,
+          "can-read-settings": true
+        },
+        "actions": {
+          "is-destroyable": true
+        },
+        "description": null,
+        "file-triggers-enabled": true,
+        "trigger-prefixes": [],
+        "source": "tfe-api",
+        "source-name": null,
+        "source-url": null
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "0",
+            "type": "organizations"
+          }
+        },
+        "current-run": {
+          "data": null
+        },
+        "latest-run": {
+          "data": null
+        },
+        "current-state-version": {
+          "data": null
+        }
+      },
+      "links": {
+        "self": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+      }
+    },
+    {
+      "id": "ws-rdCnEvU1KgVAGJnk",
+      "type": "workspaces",
+      "attributes": {
+        "name": "user-workspace",
+        "auto-apply": false,
+        "created-at": "2020-04-02T12:53:30.157Z",
+        "environment": "default",
+        "locked": false,
+        "queue-all-runs": false,
+        "terraform-version": "0.12.23",
+        "working-directory": "",
+        "speculative-enabled": true,
+        "latest-change-at": "2020-04-02T12:53:30.157Z",
+        "operations": true,
+        "vcs-repo": {
+          "branch": "",
+          "ingress-submodules": false,
+          "identifier": "ykhemani/tfe-demo-aws",
+          "display-identifier": "ykhemani/tfe-demo-aws",
+          "oauth-token-id": "ot-97jWEfbAk9sSoz2Z",
+          "webhook-url": "https://tfe.example.com/webhooks/vcs/2ee62f56-4b4d-4bc6-877e-0a4249f36fb9"
+        },
+        "vcs-repo-identifier": "ykhemani/tfe-demo-aws",
+        "permissions": {
+          "can-update": true,
+          "can-destroy": true,
+          "can-queue-destroy": false,
+          "can-queue-run": false,
+          "can-queue-apply": false,
+          "can-update-variable": true,
+          "can-lock": false,
+          "can-unlock": false,
+          "can-force-unlock": false,
+          "can-read-settings": true
+        },
+        "actions": {
+          "is-destroyable": false
+        },
+        "description": null,
+        "file-triggers-enabled": true,
+        "trigger-prefixes": [],
+        "source": "tfe-api",
+        "source-name": null,
+        "source-url": null
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "0",
+            "type": "organizations"
+          }
+        },
+        "current-run": {
+          "data": null
+        },
+        "latest-run": {
+          "data": null
+        },
+        "current-state-version": {
+          "data": null
+        }
+      },
+      "links": {
+        "self": "/api/v2/organizations/0/workspaces/user-workspace"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://tfe.example.com/api/v2/organizations/0/workspaces?page%5Bnumber%5D=1&page%5Bsize%5D=20",
+    "first": "https://tfe.example.com/api/v2/organizations/0/workspaces?page%5Bnumber%5D=1&page%5Bsize%5D=20",
+    "prev": null,
+    "next": null,
+    "last": "https://tfe.example.com/api/v2/organizations/0/workspaces?page%5Bnumber%5D=1&page%5Bsize%5D=20"
+  },
+  "meta": {
+    "status-counts": {
+      "pending": 0,
+      "plan-queued": 0,
+      "planning": 0,
+      "planned": 0,
+      "confirmed": 0,
+      "apply-queued": 0,
+      "applying": 0,
+      "applied": 0,
+      "discarded": 0,
+      "errored": 0,
+      "canceled": 0,
+      "cost-estimating": 0,
+      "cost-estimated": 0,
+      "policy-checking": 0,
+      "policy-override": 0,
+      "policy-checked": 0,
+      "policy-soft-failed": 0,
+      "planned-and-finished": 0,
+      "none": 2,
+      "total": 2
+    },
+    "pagination": {
+      "current-page": 1,
+      "prev-page": null,
+      "next-page": null,
+      "total-pages": 1,
+      "total-count": 2
+    }
+  }
+}
+
+################################################################################
+# Show workspace
+
+# GET /organizations/:organization_name/workspaces/:name
+
+curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces/${USER_WORKSPACE_NAME} | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "ws-rdCnEvU1KgVAGJnk",
+    "type": "workspaces",
+    "attributes": {
+      "name": "user-workspace",
+      "auto-apply": false,
+      "created-at": "2020-04-02T12:53:30.157Z",
+      "environment": "default",
+      "locked": false,
+      "queue-all-runs": false,
+      "terraform-version": "0.12.23",
+      "working-directory": "",
+      "speculative-enabled": true,
+      "latest-change-at": "2020-04-02T12:53:30.157Z",
+      "operations": true,
+      "vcs-repo": {
+        "branch": "",
+        "ingress-submodules": false,
+        "identifier": "ykhemani/tfe-demo-aws",
+        "display-identifier": "ykhemani/tfe-demo-aws",
+        "oauth-token-id": "ot-97jWEfbAk9sSoz2Z",
+        "webhook-url": "https://tfe.example.com/webhooks/vcs/2ee62f56-4b4d-4bc6-877e-0a4249f36fb9"
+      },
+      "vcs-repo-identifier": "ykhemani/tfe-demo-aws",
+      "permissions": {
+        "can-update": true,
+        "can-destroy": true,
+        "can-queue-destroy": false,
+        "can-queue-run": false,
+        "can-queue-apply": false,
+        "can-update-variable": true,
+        "can-lock": false,
+        "can-unlock": false,
+        "can-force-unlock": false,
+        "can-read-settings": true
+      },
+      "actions": {
+        "is-destroyable": false
+      },
+      "description": null,
+      "file-triggers-enabled": true,
+      "trigger-prefixes": [],
+      "source": "tfe-api",
+      "source-name": null,
+      "source-url": null
+    },
+    "relationships": {
+      "organization": {
+        "data": {
+          "id": "0",
+          "type": "organizations"
+        }
+      },
+      "current-run": {
+        "data": null
+      },
+      "latest-run": {
+        "data": null
+      },
+      "current-state-version": {
+        "data": null
+      }
+    },
+    "links": {
+      "self": "/api/v2/organizations/0/workspaces/user-workspace"
+    }
+  }
+}
+
+################################################################################
+# GET /workspaces/:workspace_id
+
+export WORKSPACE_ID=$(curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces | \
+  jq -r ".data[] | select (.attributes.name==\"${API_WORKSPACE_NAME}\") | .id")
+
+echo $WORKSPACE_ID
+
+curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  ${TFE_ADDR}/api/v2//workspaces/${WORKSPACE_ID} | jq -r .
+
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "ws-yjdXXuhewXdRYTfh",
+    "type": "workspaces",
+    "attributes": {
+      "name": "api-driven-workspace",
+      "auto-apply": false,
+      "created-at": "2020-04-02T12:53:59.434Z",
+      "environment": "default",
+      "locked": false,
+      "queue-all-runs": false,
+      "terraform-version": "0.12.23",
+      "working-directory": null,
+      "speculative-enabled": true,
+      "latest-change-at": "2020-04-02T12:53:59.434Z",
+      "operations": true,
+      "vcs-repo": null,
+      "vcs-repo-identifier": null,
+      "permissions": {
+        "can-update": true,
+        "can-destroy": true,
+        "can-queue-destroy": false,
+        "can-queue-run": false,
+        "can-queue-apply": false,
+        "can-update-variable": true,
+        "can-lock": false,
+        "can-unlock": false,
+        "can-force-unlock": false,
+        "can-read-settings": true
+      },
+      "actions": {
+        "is-destroyable": true
+      },
+      "description": null,
+      "file-triggers-enabled": true,
+      "trigger-prefixes": [],
+      "source": "tfe-api",
+      "source-name": null,
+      "source-url": null
+    },
+    "relationships": {
+      "organization": {
+        "data": {
+          "id": "0",
+          "type": "organizations"
+        }
+      },
+      "current-run": {
+        "data": null
+      },
+      "latest-run": {
+        "data": null
+      },
+      "current-state-version": {
+        "data": null
+      }
+    },
+    "links": {
+      "self": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+    }
+  }
+}
+
+################################################################################
+################################################################################
+# Workspace variables
+
+################################################################################
+# Create a Terraform variable
+
+# POST /workspaces/:workspace_id/vars
+
+export WORKSPACE_ID=$(curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces | \
+  jq -r ".data[] | select (.attributes.name==\"${USER_WORKSPACE_NAME}\") | .id")
+
+echo $WORKSPACE_ID
+
+export VARIABLE_0_KEY="instance_type"
+export VARIABLE_0_VALUE="t2.small"
+export VARIABLE_0_DESCRIPTION="AWS Instance size"
+
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_0_KEY}",
+      "value":"${VARIABLE_0_VALUE}",
+      "description":"${VARIABLE_0_DESCRIPTION}",
+      "category":"terraform",
+      "hcl":false,
+      "sensitive":false
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-87aB8bm1nCA36e9W",
+    "type": "vars",
+    "attributes": {
+      "key": "instance_type",
+      "value": "t2.small",
+      "sensitive": false,
+      "category": "terraform",
+      "hcl": false,
+      "created-at": "2020-04-02T13:02:05.269Z",
+      "description": "AWS Instance size"
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-rdCnEvU1KgVAGJnk",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/user-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-rdCnEvU1KgVAGJnk/vars/var-87aB8bm1nCA36e9W"
+    }
+  }
+}
+
+################################################################################
+# Create a Terraform variable
+
+export VARIABLE_1_KEY="aws_region"
+export VARIABLE_1_VALUE="us-west-2"
+export VARIABLE_1_DESCRIPTION="AWS Region"
+
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_1_KEY}",
+      "value":"${VARIABLE_1_VALUE}",
+      "description":"${VARIABLE_1_DESCRIPTION}",
+      "category":"terraform",
+      "hcl":false,
+      "sensitive":false
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+{
+  "data": {
+    "id": "var-yUDVZ73rPSgpY9Z1",
+    "type": "vars",
+    "attributes": {
+      "key": "aws_region",
+      "value": "us-west-2",
+      "sensitive": false,
+      "category": "terraform",
+      "hcl": false,
+      "created-at": "2020-04-02T12:28:01.714Z",
+      "description": "AWS Region"
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-cZPVNwEo3dCNc8DW",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/test-workspace-0"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-cZPVNwEo3dCNc8DW/vars/var-yUDVZ73rPSgpY9Z1"
+    }
+  }
+}
+
+################################################################################
+# Create a sensitive environment variable
+export VARIABLE_2_KEY="AWS_ACCESS_KEY_ID"
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_2_KEY}",
+      "value":"$(lpass show 2257392481305858736 --field AWS_ACCESS_KEY_ID)",
+      "category":"env",
+      "hcl":false,
+      "sensitive":true
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-w4iHDB9HCP7zNVNj",
+    "type": "vars",
+    "attributes": {
+      "key": "AWS_ACCESS_KEY_ID",
+      "value": null,
+      "sensitive": true,
+      "category": "env",
+      "hcl": false,
+      "created-at": "2020-04-02T13:03:24.822Z",
+      "description": null
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-rdCnEvU1KgVAGJnk",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/user-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-rdCnEvU1KgVAGJnk/vars/var-w4iHDB9HCP7zNVNj"
+    }
+  }
+}
+
+
+
+
+################################################################################
+# Create a sensitive environment variable
+export VARIABLE_3_KEY="AWS_SECRET_ACCESS_KEY"
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_3_KEY}",
+      "value":"$(lpass show 2257392481305858736 --field AWS_SECRET_ACCESS_KEY)",
+      "category":"env",
+      "hcl":false,
+      "sensitive":true
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-og2o9vUhVP63ntZk",
+    "type": "vars",
+    "attributes": {
+      "key": "AWS_SECRET_ACCESS_KEY",
+      "value": null,
+      "sensitive": true,
+      "category": "env",
+      "hcl": false,
+      "created-at": "2020-04-02T13:03:53.326Z",
+      "description": null
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-rdCnEvU1KgVAGJnk",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/user-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-rdCnEvU1KgVAGJnk/vars/var-og2o9vUhVP63ntZk"
+    }
+  }
+}
+
+################################################################################
+# Create the CONFIRM_DESTROY environment variable
+export VARIABLE_4_KEY="CONFIRM_DESTROY"
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_4_KEY}",
+      "value":"1",
+      "category":"env",
+      "hcl":false,
+      "sensitive":false
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-MLy5GhLp97WKk4xp",
+    "type": "vars",
+    "attributes": {
+      "key": "CONFIRM_DESTROY",
+      "value": "1",
+      "sensitive": false,
+      "category": "env",
+      "hcl": false,
+      "created-at": "2020-04-02T13:04:12.882Z",
+      "description": null
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-rdCnEvU1KgVAGJnk",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/user-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-rdCnEvU1KgVAGJnk/vars/var-MLy5GhLp97WKk4xp"
+    }
+  }
+}
+
+################################################################################
+################################################################################
+################################################################################
+# Policy Sets
+
+################################################################################
+# Create a global policy set
+
+# POST /organizations/:organization_name/policy-sets
+
+export POLICY_NAME=global
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type": "policy-sets",
+    "attributes": {
+      "name": "${POLICY_NAME}",
+      "description": "This set contains policies that should be checked on all workspaces.",
+      "global": true,
+      "policies-path": "/global",
+      "vcs-repo": {
+        "branch": "master",
+        "identifier": "ykhemani/tfe-demo-policy-set",
+        "ingress-submodules": false,
+        "oauth-token-id": "${VCS_OAUTH_TOKEN_ID}"
+      }
+    }
+  }
+}
+EOF
+
+curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/policy-sets | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "polset-rvg2Nr6u321B3288",
+    "type": "policy-sets",
+    "attributes": {
+      "name": "global",
+      "description": "This set contains policies that should be checked on all workspaces.",
+      "global": true,
+      "workspace-count": 2,
+      "created-at": "2020-04-02T13:06:06.503Z",
+      "updated-at": "2020-04-02T13:06:06.503Z",
+      "vcs-repo": {
+        "branch": "master",
+        "ingress-submodules": false,
+        "identifier": "ykhemani/tfe-demo-policy-set",
+        "display-identifier": "ykhemani/tfe-demo-policy-set",
+        "oauth-token-id": "ot-97jWEfbAk9sSoz2Z",
+        "webhook-url": "https://tfe.example.com/webhooks/vcs/57e81b55-4e69-4f14-9cf6-f49fceeb1a08"
+      },
+      "policies-path": "/global",
+      "versioned": true
+    },
+    "relationships": {
+      "organization": {
+        "data": {
+          "id": "0",
+          "type": "organizations"
+        }
+      },
+      "newest-version": {
+        "data": {
+          "id": "polsetver-yPGLJ5Df2pgVeJY4",
+          "type": "policy-set-versions"
+        },
+        "links": {
+          "related": "/api/v2/policy-set-versions/polsetver-yPGLJ5Df2pgVeJY4"
+        }
+      },
+      "policies": {
+        "data": []
+      }
+    },
+    "links": {
+      "self": "/api/v2/policy-sets/polset-rvg2Nr6u321B3288"
+    }
+  }
+}
+
+
+################################################################################
+# Create a policy set specific to some workspaces
+
+# POST /organizations/:organization_name/policy-sets
+
+export POLICY_NAME=development
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type": "policy-sets",
+    "attributes": {
+      "name": "${POLICY_NAME}",
+      "description": "This set contains policies that should be checked on all development infrastructure workspaces.",
+      "global": false,
+      "policies-path": "/development",
+      "vcs-repo": {
+        "branch": "master",
+        "identifier": "ykhemani/tfe-demo-policy-set",
+        "ingress-submodules": false,
+        "oauth-token-id": "${VCS_OAUTH_TOKEN_ID}"
+      }
+    },
+    "relationships": {
+      "workspaces": {
+        "data": [
+          { "id": "${WORKSPACE_ID}", "type": "workspaces" }
+        ]
+      }
+    }
+  }
+}
+EOF
+
+curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/policy-sets | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "polset-NQxM6ZhBAZYNhqst",
+    "type": "policy-sets",
+    "attributes": {
+      "name": "development",
+      "description": "This set contains policies that should be checked on all development infrastructure workspaces.",
+      "global": false,
+      "workspace-count": 1,
+      "created-at": "2020-04-02T13:06:40.157Z",
+      "updated-at": "2020-04-02T13:06:40.157Z",
+      "vcs-repo": {
+        "branch": "master",
+        "ingress-submodules": false,
+        "identifier": "ykhemani/tfe-demo-policy-set",
+        "display-identifier": "ykhemani/tfe-demo-policy-set",
+        "oauth-token-id": "ot-97jWEfbAk9sSoz2Z",
+        "webhook-url": "https://tfe.example.com/webhooks/vcs/57e81b55-4e69-4f14-9cf6-f49fceeb1a08"
+      },
+      "policies-path": "/development",
+      "versioned": true
+    },
+    "relationships": {
+      "organization": {
+        "data": {
+          "id": "0",
+          "type": "organizations"
+        }
+      },
+      "newest-version": {
+        "data": {
+          "id": "polsetver-8NyNSpg3NPw9b5tN",
+          "type": "policy-set-versions"
+        },
+        "links": {
+          "related": "/api/v2/policy-set-versions/polsetver-8NyNSpg3NPw9b5tN"
+        }
+      },
+      "policies": {
+        "data": []
+      },
+      "workspaces": {
+        "data": [
+          {
+            "id": "ws-rdCnEvU1KgVAGJnk",
+            "type": "workspaces"
+          }
+        ]
+      }
+    },
+    "links": {
+      "self": "/api/v2/policy-sets/polset-NQxM6ZhBAZYNhqst"
+    }
+  }
+}
+
+# We are now ready to provide this workspace to the developer.
+################################################################################
+
+################################################################################
+################################################################################
+# The API-driven workflow
+
+################################################################################
+# Define variables
+
+# POST /workspaces/:workspace_id/vars
+
+export WORKSPACE_ID=$(curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces | \
+  jq -r ".data[] | select (.attributes.name==\"${API_WORKSPACE_NAME}\") | .id")
+
+echo $WORKSPACE_ID
+
+export VARIABLE_0_KEY="instance_type"
+export VARIABLE_0_VALUE="t2.small"
+export VARIABLE_0_DESCRIPTION="AWS Instance size"
+
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_0_KEY}",
+      "value":"${VARIABLE_0_VALUE}",
+      "description":"${VARIABLE_0_DESCRIPTION}",
+      "category":"terraform",
+      "hcl":false,
+      "sensitive":false
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-7SPj9ejJiha9svNC",
+    "type": "vars",
+    "attributes": {
+      "key": "instance_type",
+      "value": "t2.small",
+      "sensitive": false,
+      "category": "terraform",
+      "hcl": false,
+      "created-at": "2020-04-02T13:31:56.757Z",
+      "description": "AWS Instance size"
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-yjdXXuhewXdRYTfh",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-yjdXXuhewXdRYTfh/vars/var-7SPj9ejJiha9svNC"
+    }
+  }
+}
+
+################################################################################
+# Create a Terraform variable
+
+export VARIABLE_1_KEY="aws_region"
+export VARIABLE_1_VALUE="us-west-2"
+export VARIABLE_1_DESCRIPTION="AWS Region"
+
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_1_KEY}",
+      "value":"${VARIABLE_1_VALUE}",
+      "description":"${VARIABLE_1_DESCRIPTION}",
+      "category":"terraform",
+      "hcl":false,
+      "sensitive":false
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+{
+  "data": {
+    "id": "var-56X6mfHA5gfD4Pxv",
+    "type": "vars",
+    "attributes": {
+      "key": "aws_region",
+      "value": "us-west-2",
+      "sensitive": false,
+      "category": "terraform",
+      "hcl": false,
+      "created-at": "2020-04-02T13:32:29.508Z",
+      "description": "AWS Region"
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-yjdXXuhewXdRYTfh",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-yjdXXuhewXdRYTfh/vars/var-56X6mfHA5gfD4Pxv"
+    }
+  }
+}
+
+################################################################################
+# Create a sensitive environment variable
+export VARIABLE_2_KEY="AWS_ACCESS_KEY_ID"
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_2_KEY}",
+      "value":"$(lpass show 2257392481305858736 --field AWS_ACCESS_KEY_ID)",
+      "category":"env",
+      "hcl":false,
+      "sensitive":true
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-NQ941ziBoRh9FLj9",
+    "type": "vars",
+    "attributes": {
+      "key": "AWS_ACCESS_KEY_ID",
+      "value": null,
+      "sensitive": true,
+      "category": "env",
+      "hcl": false,
+      "created-at": "2020-04-02T13:33:20.581Z",
+      "description": null
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-yjdXXuhewXdRYTfh",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-yjdXXuhewXdRYTfh/vars/var-NQ941ziBoRh9FLj9"
+    }
+  }
+}
+
+################################################################################
+# Create a sensitive environment variable
+export VARIABLE_3_KEY="AWS_SECRET_ACCESS_KEY"
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_3_KEY}",
+      "value":"$(lpass show 2257392481305858736 --field AWS_SECRET_ACCESS_KEY)",
+      "category":"env",
+      "hcl":false,
+      "sensitive":true
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-R1PyxTy9R5MGhcxD",
+    "type": "vars",
+    "attributes": {
+      "key": "AWS_SECRET_ACCESS_KEY",
+      "value": null,
+      "sensitive": true,
+      "category": "env",
+      "hcl": false,
+      "created-at": "2020-04-02T13:33:45.070Z",
+      "description": null
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-yjdXXuhewXdRYTfh",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-yjdXXuhewXdRYTfh/vars/var-R1PyxTy9R5MGhcxD"
+    }
+  }
+}
+
+################################################################################
+# Create the CONFIRM_DESTROY environment variable
+export VARIABLE_4_KEY="CONFIRM_DESTROY"
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "type":"vars",
+    "attributes": {
+      "key":"${VARIABLE_4_KEY}",
+      "value":"1",
+      "category":"env",
+      "hcl":false,
+      "sensitive":false
+    }
+  }
+}
+EOF
+
+
+curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/vars | jq -r .
+
+################################################################################
+# Sample response
+
+{
+  "data": {
+    "id": "var-g7pt7UZjLxJZHQNr",
+    "type": "vars",
+    "attributes": {
+      "key": "CONFIRM_DESTROY",
+      "value": "1",
+      "sensitive": false,
+      "category": "env",
+      "hcl": false,
+      "created-at": "2020-04-02T13:34:09.415Z",
+      "description": null
+    },
+    "relationships": {
+      "configurable": {
+        "data": {
+          "id": "ws-yjdXXuhewXdRYTfh",
+          "type": "workspaces"
+        },
+        "links": {
+          "related": "/api/v2/organizations/0/workspaces/api-driven-workspace"
+        }
+      }
+    },
+    "links": {
+      "self": "/api/v2/workspaces/ws-yjdXXuhewXdRYTfh/vars/var-g7pt7UZjLxJZHQNr"
+    }
+  }
+}
+
+################################################################################
+# Create content tar-gzip file
+
+export CONTENT_DIRECTORY=./tf_config
+
+export UPLOAD_FILE_NAME="./content-$(date +%s).tar.gz"
+
+tar -zcvf "$UPLOAD_FILE_NAME" -C "$CONTENT_DIRECTORY" .
+
+################################################################################
+# Push a new configuration version
+
+export WORKSPACE_ID=$(curl \
+  --header "Authorization: Bearer $TFE_ORG_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  ${TFE_ADDR}/api/v2/organizations/${TFE_ORG}/workspaces | \
+  jq -r ".data[] | select (.attributes.name==\"${API_WORKSPACE_NAME}\") | .id")
+
+echo $WORKSPACE_ID
+
+cat <<EOF > create_config_version.json
+{
+  "data": {
+    "type": "configuration-versions"
+  }
+}
+EOF
+
+UPLOAD_URL=($(curl \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @create_config_version.json \
+  ${TFE_ADDR}/api/v2/workspaces/${WORKSPACE_ID}/configuration-versions \
+  | jq -r '.data.attributes."upload-url"' ) )
+
+echo ${UPLOAD_URL}
+
+################################################################################
+# Upload the configuration
+
+curl \
+  --header "Content-Type: application/octet-stream" \
+  --request PUT \
+  --data-binary @"${UPLOAD_FILE_NAME}" \
+  ${UPLOAD_URL}
+
+################################################################################
+# Create a run
+
+# POST /runs
+
+cat <<EOF > payload.json
+{
+  "data": {
+    "attributes": {
+      "is-destroy":false
+    },
+    "type":"runs",
+    "relationships": {
+      "workspace": {
+        "data": {
+          "type": "workspaces",
+          "id": "${WORKSPACE_ID}"
+        }
+      }
+    }
+  }
+}
+EOF
+
+export RUN_ID=$(curl \
+  -s \
+  --header "Authorization: Bearer $TFE_TEAM_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --data @payload.json \
+  ${TFE_ADDR}/api/v2/runs)
+
+################################################################################
+################################################################################
